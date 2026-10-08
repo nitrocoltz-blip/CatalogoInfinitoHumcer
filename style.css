@@ -198,7 +198,10 @@ footer{background:linear-gradient(180deg,transparent,rgba(255,255,255,.02))}
   .row{gap:5px}
 }
 
-.cover-loading{position:relative;flex:1 1 0;min-height:0;height:0;background:linear-gradient(135deg,#eeeef4,#d8d7e1);overflow:hidden}.cover-loading::after{content:"Buscando carátula...";position:absolute;inset:0;display:grid;place-items:center;color:#777;font-weight:800;font-size:1rem;text-align:center;padding:20px}.inner img{flex:1 1 0;min-height:0;height:0;position:relative;width:100%;object-fit:cover;object-position:center top}
+.cover-loading,.cover-unavailable{position:relative;flex:1 1 0;min-height:0;height:0;display:grid;place-items:center;background:linear-gradient(135deg,#eeeef4,#d8d7e1);overflow:hidden;color:#777;font-weight:800;font-size:clamp(.8rem,1.4vw,1rem);text-align:center;padding:20px}
+.cover-loading::after{content:"Buscando carátula...";position:absolute;inset:0;display:grid;place-items:center}
+.cover-unavailable{background:linear-gradient(135deg,#272637,#171622);color:var(--muted)}
+.inner img{flex:1 1 0;min-height:0;height:0;position:relative;width:100%;object-fit:cover;object-position:center top}
 
 .hero>.sil{top:82px;width:clamp(110px,20vw,220px)}
 .sil-left{left:50%!important;right:auto!important;transform:translateX(-288%)!important}

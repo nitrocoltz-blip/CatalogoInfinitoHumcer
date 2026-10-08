@@ -36,7 +36,6 @@ const GAMES = [
   { name:"Blasphemous", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Bloons TD 6", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Borderlands 2", platform:"Steam", status:"obtenido", img:"", url:"" },
-  { name:"Borderlands 2", platform:"Epic Games", status:"obtenido", img:"", url:"" },
   { name:"Botany Manor", platform:"Epic Games", status:"obtenido", img:"", url:"" },
   { name:"Brotato", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Buckshot Roulette", platform:"Steam", status:"obtenido", img:"", url:"" },
@@ -106,7 +105,6 @@ const GAMES = [
   { name:"Escape the Backrooms", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Fallout 3 - Game of the Year Edition", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Fallout 4", platform:"Steam", status:"obtenido", img:"", url:"" },
-  { name:"Fallout 4", platform:"Steam", status:"porconseguir", img:"", url:"" },
   { name:"Fallout 76", platform:"Steam", status:"porconseguir", img:"", url:"" },
   { name:"Fallout Shelter", platform:"Steam", status:"obtenido", img:"", url:"" },
   { name:"Fallout: New Vegas", platform:"Steam", status:"porconseguir", img:"", url:"" },
@@ -304,7 +302,6 @@ const GAMES = [
   { name:"Super Mario Galaxy 2", platform:"Nintendo Switch", status:"obtenido", img:"", url:"" },
   { name:"Super Mario Odyssey", platform:"Nintendo Switch", status:"obtenido", img:"", url:"" },
   { name:"Super Meat Boy", platform:"Steam", status:"obtenido", img:"", url:"" },
-  { name:"Super Meat Boy", platform:"Epic Games", status:"obtenido", img:"", url:"" },
   { name:"Super Meat Boy Forever", platform:"Epic Games", status:"obtenido", img:"", url:"" },
   { name:"Super Slime Arena", platform:"Steam", status:"porconseguir", img:"", url:"" },
   { name:"Supermarket Together", platform:"Steam", status:"obtenido", img:"", url:"" },
@@ -406,6 +403,7 @@ function stats(){
 
 const coverCache = JSON.parse(localStorage.getItem("humcer_cover_cache") || "{}");
 const pendingCovers = new Map();
+const failedCovers = new Set();
 let coversLoading = false;
 
 function normalizeGameName(name){
@@ -434,10 +432,16 @@ function proxyUrl(url){
 async function jsonFetch(url){
   const urls=[url, proxyUrl(url)];
   for(const target of urls){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),3000);
     try{
-      const r=await fetch(target,{headers:{Accept:"application/json"}});
+      const r=await fetch(target,{headers:{Accept:"application/json"},signal:controller.signal});
       if(r.ok) return await r.json();
-    }catch(e){}
+    }catch(e){
+      if(e.name!=="AbortError") console.warn("No se pudo cargar una fuente de portadas:",e);
+    }finally{
+      clearTimeout(timeout);
+    }
   }
   return null;
 }
@@ -493,17 +497,74 @@ function coverUrls(appid){
   return [
     `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`,
-    `https://steamcdn-a.akamaihd.net/steam/apps/${appid}/library_600x900.jpg`,
     `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`
   ];
+}
+
+function coverKey(g){
+  return String(GAMES.indexOf(g));
+}
+
+function markCoverUnavailable(g){
+  failedCovers.add(g);
+  const slot=[...document.querySelectorAll("[data-cover-key]")]
+    .find(el=>el.dataset.coverKey===coverKey(g));
+  if(!slot) return;
+  const unavailable=document.createElement("div");
+  unavailable.className="cover-unavailable";
+  unavailable.textContent="Portada no disponible";
+  slot.replaceWith(unavailable);
+}
+
+function watchCoverImage(img){
+  let timeout;
+  let observer;
+  const clearWatch=()=>{
+    clearTimeout(timeout);
+    observer?.disconnect();
+  };
+  const fail=()=>{
+    if(!img.isConnected) return;
+    clearWatch();
+    const g=GAMES[Number(img.dataset.coverKey)];
+    if(g) markCoverUnavailable(g);
+    else img.remove();
+  };
+  img.addEventListener("error",fail,{once:true});
+  img.addEventListener("load",clearWatch,{once:true});
+  const startWatchdog=()=>{ timeout=setTimeout(()=>{
+    if(img.isConnected && !img.complete) fail();
+    else if(img.isConnected && img.naturalWidth===0) fail();
+  },8000); };
+
+  if(img.complete){
+    if(img.naturalWidth===0) fail();
+  }else if(img.loading==="lazy" && "IntersectionObserver" in window){
+    observer=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)){
+        observer.disconnect();
+        startWatchdog();
+      }
+    });
+    observer.observe(img);
+  }else{
+    startWatchdog();
+  }
 }
 
 async function loadSteamCover(g, appid){
   for(const src of coverUrls(appid)){
     const ok=await new Promise(resolve=>{
       const test=new Image();
-      test.onload=()=>resolve(true);
-      test.onerror=()=>resolve(false);
+      const timeout=setTimeout(()=>finish(false),3000);
+      const finish=success=>{
+        clearTimeout(timeout);
+        test.onload=null;
+        test.onerror=null;
+        resolve(success);
+      };
+      test.onload=()=>finish(true);
+      test.onerror=()=>finish(false);
       test.src=src;
     });
     if(ok){
@@ -518,17 +579,18 @@ function setCoverForGame(g, src, appid){
   if(!src) return;
   g.img=src;
   if(appid) g.appid=appid;
-  const selector=`[data-cover-key="${esc(normalizeGameName(g.name))}"]`;
-  const slot=document.querySelector(selector);
+  const slot=[...document.querySelectorAll("[data-cover-key]")]
+    .find(el=>el.dataset.coverKey===coverKey(g));
   if(!slot) return;
   const cardIndex=Array.from(document.querySelectorAll(".card")).indexOf(slot.closest(".card"));
   const el=document.createElement("img");
   el.alt="";
+  el.dataset.coverKey=coverKey(g);
   el.loading=cardIndex >= 0 && cardIndex < 4 ? "eager" : "lazy";
   el.fetchPriority=cardIndex >= 0 && cardIndex < 2 ? "high" : "auto";
   el.decoding="async";
   el.src=src;
-  el.onerror=()=>el.remove();
+  watchCoverImage(el);
   slot.replaceWith(el);
 }
 
@@ -538,8 +600,10 @@ function card(g,index){
   const loading=index < 4 ? "eager" : "lazy";
   const priority=index < 2 ? "high" : "auto";
   const img = known
-    ? `<img data-game="${esc(g.name)}" src="${esc(known)}" alt="" loading="${loading}" fetchpriority="${priority}" decoding="async" onerror="this.remove()">`
-    : `<div class="cover-loading" data-cover-key="${esc(normalizeGameName(g.name))}"></div>`;
+    ? `<img data-game="${esc(g.name)}" data-cover-key="${coverKey(g)}" src="${esc(known)}" alt="" loading="${loading}" fetchpriority="${priority}" decoding="async">`
+    : failedCovers.has(g)
+      ? `<div class="cover-unavailable" data-cover-key="${coverKey(g)}">Portada no disponible</div>`
+      : `<div class="cover-loading" data-cover-key="${coverKey(g)}"></div>`;
   const check = done ? `<div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>` : "";
   const go = wish ? `<a class="go" href="${esc(g.url || (g.appid ? "https://store.steampowered.com/app/" + g.appid : "https://store.steampowered.com/search/?term=" + encodeURIComponent(g.name)))}" target="_blank" rel="noopener">Ver en<br>Steam</a>` : "";
   return `<article class="card"><div class="frame">${check}<div class="inner">${img}
@@ -548,7 +612,7 @@ function card(g,index){
 }
 
 async function resolveCover(g){
-  if(g.img || (typeof COVERS !== "undefined" && COVERS[g.name])) return;
+  if(g.img || (typeof COVERS !== "undefined" && COVERS[g.name]) || failedCovers.has(g)) return;
 
   const cached=coverCache[normalizeGameName(g.name)];
   if(cached?.appid){
@@ -570,6 +634,7 @@ async function resolveCover(g){
 
   const wiki=await findWikipediaCover(g.name);
   if(wiki?.img) setCoverForGame(g,wiki.img);
+  else markCoverUnavailable(g);
 }
 
 async function loadMissingCovers(){
@@ -614,6 +679,7 @@ function view(){
   const slice = list.slice((page-1)*PER_PAGE, page*PER_PAGE);
 
   $("grid").innerHTML = slice.length ? slice.map((g,index)=>card(g,index)).join("") : '<div class="empty">No se encontraron juegos con ese filtro.</div>';
+  $("grid").querySelectorAll("img[data-cover-key]").forEach(watchCoverImage);
   $("pageLbl").textContent = "Pag: " + page;
   $("prev").disabled = page <= 1; $("next").disabled = page >= pages;
   $("jump").dataset.pages = pages; $("jpIn").max = pages;
