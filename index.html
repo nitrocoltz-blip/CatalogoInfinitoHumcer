@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Biblioteca de Humcer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://store.steampowered.com">
+<link rel="preconnect" href="https://cdn.cloudflare.steamstatic.com">
+<link rel="preconnect" href="https://api.allorigins.win">
+<link rel="preconnect" href="https://en.wikipedia.org">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <img class="sil sil-left" src="bulbasaur.png" alt="" aria-hidden="true">
+  <img class="sil sil-right" src="bulbasaur.png" alt="" aria-hidden="true">
+  <div class="hints" aria-hidden="true">
+    <span><i>A</i>Seleccionar</span><span><i>X</i>Vista de la caja</span><span><i>Y</i>Modo de selección</span><span><i>B</i>Atrás</span>
+  </div>
+  <div class="tag">LISTA DE JUEGOS</div>
+  <h1>Biblioteca de <b>Humcer</b></h1>
+  <p>Estos juegos son los que poseo a mano para jugar y stremear. Si deseas que los juegue comunícate conmigo para poderle dar espacio en los horarios.</p>
+  <p>Para ser jugados sin esperar puedes usar los puntos de canal o subscribirte.</p>
+  <nav class="links">
+    <a class="btn steam" id="lnkSteam" href="#">Mi perfil de Steam</a>
+    <a class="btn discord" id="lnkDiscord" href="#">Servidor de Discord</a>
+    <a class="btn twitch" id="lnkTwitch" href="#">Volver a Twitch</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="stats" aria-label="Resumen">
+    <div class="stat"><strong id="nTotal">00</strong><span>Juegos en la lista</span></div>
+    <div class="stat"><strong id="nDone">00</strong><span>Completados</span></div>
+    <div class="stat"><strong id="nWish">00</strong><span>Por conseguir (Wishlist)</span></div>
+  </section>
+  <div class="bar" role="progressbar" aria-label="Progreso de juegos completados" aria-valuemin="0" aria-valuemax="100"><div id="barFill"></div></div>
+
+  <div class="toolbar">
+  <div class="search">
+    <label for="q">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0d0c14" stroke-width="2.2" stroke-linecap="round"><circle cx="14" cy="10" r="6"/><path d="M10 14l-7 7"/></svg>
+      Búsqueda
+    </label>
+    <input id="q" type="search" placeholder="Buscar Juego..." autocomplete="off">
+  </div>
+
+  <div class="filters">
+    <label class="sort">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1a1300" stroke-width="2" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg>
+      <span>Ordenar:</span>
+      <select id="sort" aria-label="Ordenar juegos">
+        <option value="recientes">recientes</option>
+        <option value="az">A - Z</option>
+        <option value="za">Z - A</option>
+      </select>
+    </label>
+    <button class="pill" data-f="todos" aria-pressed="true">Todos</button>
+    <button class="pill" data-f="obtenido" aria-pressed="false">Obtenidos</button>
+    <button class="pill" data-f="completado" aria-pressed="false">Completados</button>
+    <button class="pill" data-f="porconseguir" aria-pressed="false">Por Conseguir</button>
+    <button class="pill platform-toggle" id="platformToggle" type="button" aria-expanded="false" aria-controls="platformMenu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span id="platformToggleLabel">Plataforma</span>
+    </button>
+  </div>
+  <div class="platform-menu" id="platformMenu" aria-label="Filtrar por plataforma" hidden>
+    <div class="platform-menu-header">
+      <strong>Filtrar por plataforma</strong>
+      <button class="platform-clear" id="platformClear" type="button">Limpiar</button>
+    </div>
+    <div class="platform-options" id="platformOptions"></div>
+  </div>
+
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="grid" id="grid" aria-live="polite"></div>
+
+  <div class="pager">
+    <img class="pager-sil pager-sil-left" src="bulbasaur-bottom-left.png" alt="" aria-hidden="true" loading="eager" decoding="async">
+    <div class="pg">
+      <button id="prev" aria-label="Página anterior">&#9664;</button>
+      <span id="pageLbl">Pag: 1</span>
+      <button id="next" aria-label="Página siguiente">&#9654;</button>
+    </div>
+    <div class="jumpbox">
+      <button class="jump" id="jump" aria-label="Ir a una página" aria-expanded="false">....</button>
+      <div class="jp" id="jp" hidden><input id="jpIn" type="number" min="1" inputmode="numeric" aria-label="Número de página"><button id="jpGo">Ir</button></div>
+    </div>
+    <img class="pager-sil pager-sil-right" src="bulbasaur-bottom-right.png" alt="" aria-hidden="true" loading="eager" decoding="async">
+  </div>
+</main>
+
+<footer>&copy; Copyright. Creado por Nitrocolt</footer>
+
+<script src="covers.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
